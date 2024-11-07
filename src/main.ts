@@ -108,22 +108,33 @@ async function sendFiles() {
 
   pc.addEventListener('datachannel', async (event) => {
     const dc = event.channel;
+    dc.bufferedAmountLowThreshold = 65535;
     dc.addEventListener('message', async (event) => {
       console.log('Received message:', event.data);
       if (event.data === 'download') {
         const reader = new FileReader();
         let currentChunk = 0;
-        const chunkSize = 4096;
-        dc.send(JSON.stringify({ name: file.name, size: file.size }));
+        const chunkSize = 16384;
+        dc.send(JSON.stringify({ filename: file.name, size: file.size }));
         console.log('Sending file:', file.name, file.size);
         reader.readAsArrayBuffer(file.slice(0, Math.min(chunkSize, file.size)));
         reader.onload = () => {
-          dc.send(reader.result as ArrayBuffer);
-          currentChunk++;
-          if (currentChunk * chunkSize < file.size) {
-            reader.readAsArrayBuffer(file.slice(currentChunk * chunkSize, Math.min((currentChunk + 1) * chunkSize, file.size)));
+          if (dc.bufferedAmount > dc.bufferedAmountLowThreshold) {
+            dc.onbufferedamountlow = () => {
+              dc.send(reader.result as ArrayBuffer);
+              currentChunk++;
+              if (currentChunk * chunkSize < file.size) {
+                reader.readAsArrayBuffer(file.slice(currentChunk * chunkSize, Math.min((currentChunk + 1) * chunkSize, file.size)));
+              }
             }
-        };
+          } else {
+            dc.send(reader.result as ArrayBuffer);
+            currentChunk++;
+            if (currentChunk * chunkSize < file.size) {
+              reader.readAsArrayBuffer(file.slice(currentChunk * chunkSize, Math.min((currentChunk + 1) * chunkSize, file.size)));
+            }
+          };
+        }
         if (currentChunk * chunkSize >= file.size) {
           reader.abort();
         }
@@ -148,8 +159,9 @@ async function downloadFiles(dc: RTCDataChannel) {
   dc.addEventListener('message', (event) => {
     if (!(event.data instanceof ArrayBuffer)) {
       const data = JSON.parse(event.data);
-      console.log(`Received file: ${data.name} (${data.size} bytes)`);
-      fileName = data.name;
+      console.log(data)
+      console.log(`Received file: ${data.filename} (${data.size} bytes)`);
+      fileName = data.filename;
       fileSize = data.size;
       manifestReceived = true;
     }
