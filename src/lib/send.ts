@@ -1,4 +1,5 @@
 import { initializeApp } from 'firebase/app'
+import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
 import { addDoc, collection, getFirestore, onSnapshot, setDoc } from 'firebase/firestore'
 import { firebaseConfig, iceServers } from './config';
 import { connectionStateColor, formatDownloadProgress } from './helpers';
@@ -24,6 +25,11 @@ export async function send(file: File) {
 	// Initialize Firestore (for signalling)
 	const app = initializeApp(firebaseConfig);
 	const db = getFirestore(app);
+  initializeAppCheck(app, {
+    provider: new ReCaptchaV3Provider(import.meta.env.VITE_RECAPTCHA_SITE_KEY),
+    isTokenAutoRefreshEnabled: true
+  });
+
 	const transfersCollection = collection(db, "transfers");
 
 	// Initalize WebRTC
