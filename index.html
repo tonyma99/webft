@@ -8,27 +8,35 @@
   </head>
   <body>
     <div id="app">
-      <div id="header">
+      <header>
         <h1>🚚 Web File Transfer</h1>
+        <span id="connectionState"></span>
+      </header>
+      <main>
+        <div id="send">
+          <div>
+            <button id="fileSelect" type="button">Select</button>
+            <input
+              hidden
+              type="file"
+              id="fileInput"
+              name="file" />
+            <span>or drop a file</span>
+          </div>
+          <span>👇</span>
+          <span id="selectedFile">No file selected.</span>
+          <button id="sendButton" disabled>Send</button>
+          <div id="fileDrop"></div>
       </div>
-      <span id="connectionState"></span>
-      <div id="send">
-        <button id="uploadButton" onclick="document.getElementById('file').click()">
-          Select
-          <input hidden type="file" id="file" name="file" />
-        </button>
-        <p>or drop a file</p>
-        <div id="selectedFiles" style="display: none;">
-          <span id="sendFile"></span>
-          <button id="sendButton">Send</button>
-        </div>
-        <div id="dropZone"></div>
-    </div>
-    <div id="receive">
-      <span id="receiveFile"></span>
-      <span id="downloadProgress"></span>
-      <button id="downloadButton">Download</button>
-    </div>
+      <div id="receive">
+        <span id="fileInfo"></span>
+        <span id="downloadProgress"></span>
+        <button id="downloadButton" hidden disabled>Download</button>
+      </div>
+    </main>
+    <footer>
+      <a href="https://github.com/tonyma99/webft">GitHub</a>
+    </footer>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
