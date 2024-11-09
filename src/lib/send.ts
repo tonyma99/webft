@@ -4,7 +4,9 @@ import { addDoc, collection, getFirestore, onSnapshot, setDoc } from 'firebase/f
 import { firebaseConfig, iceServers } from './config';
 import { connectionStateColor, formatDownloadProgress } from './helpers';
 
+const sendContainer = document.getElementById("send") as HTMLDivElement;
 const sendButton = document.getElementById("sendButton") as HTMLButtonElement;
+const connectionState = document.getElementById("connectionState") as HTMLSpanElement;
 
 function createQRElement(url: string): HTMLImageElement {
   const qr = document.createElement("img");
@@ -19,7 +21,7 @@ function createQRElement(url: string): HTMLImageElement {
 export async function send(file: File) {
   // Update the user view
   const selectedFile = document.getElementById("selectedFile")?.cloneNode(true) as HTMLSpanElement;
-  (document.getElementById("send") as HTMLDivElement).innerHTML = "";
+  sendContainer.innerHTML = "";
 	sendButton.disabled = true;
   
 	// Initialize Firestore (for signalling)
@@ -46,7 +48,7 @@ export async function send(file: File) {
   // Show download link
   const qrLink = `${import.meta.env.VITE_BASE_URL}?receive=${transferId}`
   const qrEl = createQRElement(qrLink);
-  (document.getElementById("send") as HTMLDivElement).appendChild(qrEl);
+  sendContainer.appendChild(qrEl);
 	console.log(qrLink)
 
   // Listen for incoming offers
@@ -59,7 +61,6 @@ export async function send(file: File) {
         const offerCandidatesCollection = collection(change.doc.ref, "offerCandidates");
 
         // Show connection state to user
-        const connectionState = document.getElementById("connectionState") as HTMLSpanElement;
         pc.onconnectionstatechange = () => {
           connectionState.textContent = pc.connectionState;
           connectionState.style.color = connectionStateColor(pc.connectionState);
@@ -95,58 +96,47 @@ export async function send(file: File) {
   pc.addEventListener('datachannel', async (event) => {
     // On data channel open, send file details
     const dc = event.channel;
-    dc.bufferedAmountLowThreshold = 65536;
     dc.send(JSON.stringify({
       filename: file.name,
       size: file.size
-   }));
+    }));
 
     dc.addEventListener('message', async (event) => {
       if (event.data === 'download') {
         // Update the user view
-        (document.getElementById("qr") as HTMLImageElement).remove();
-        (document.getElementById("send") as HTMLDivElement).appendChild(selectedFile);
+        qrEl.remove();
         const downloadProgress = document.createElement("span");
         downloadProgress.id = "downloadProgress";
-        (document.getElementById("send") as HTMLDivElement).appendChild(downloadProgress);
+        sendContainer.appendChild(selectedFile);
+        sendContainer.appendChild(downloadProgress);
 
         // On download request, send file data
         let currentChunk = 0;
         let bytesSent = 0;
-        const chunkSize = 8196;
+        const chunkSize = 8192;
         const reader = new FileReader();
 
-        reader.readAsArrayBuffer(file.slice(0, Math.min(chunkSize, file.size)));
-        bytesSent += Math.min(chunkSize, file.size);
-
         reader.onload = () => {
-          if (dc.bufferedAmount > dc.bufferedAmountLowThreshold) {
-            dc.onbufferedamountlow = () => {
-              dc.send(reader.result as ArrayBuffer);
-              currentChunk++;
-              bytesSent += Math.min(chunkSize, file.size - currentChunk * chunkSize);
-              if (currentChunk * chunkSize < file.size) {
-                reader.readAsArrayBuffer(file.slice(currentChunk * chunkSize, Math.min((currentChunk + 1) * chunkSize, file.size)));
-              }
-            }
-          } else {
-            dc.send(reader.result as ArrayBuffer);
-            currentChunk++;
-            bytesSent += Math.min(chunkSize, file.size - currentChunk * chunkSize);
-            if (currentChunk * chunkSize < file.size) {
-              reader.readAsArrayBuffer(file.slice(currentChunk * chunkSize, Math.min((currentChunk + 1) * chunkSize, file.size)));
-            }
-          };
-          // Show download progress
-          (document.getElementById("downloadProgress") as HTMLDivElement).innerHTML = formatDownloadProgress(bytesSent, file.size);
+          dc.send(reader.result as ArrayBuffer);
+          currentChunk++;
+          if (currentChunk * chunkSize < file.size) {
+            readChunk(currentChunk);
+          }
+          downloadProgress.innerHTML = formatDownloadProgress(bytesSent, file.size);
         }
-        if (currentChunk * chunkSize >= file.size) {
-          reader.abort();
+
+        const readChunk = (chunk: number) => {
+          const start = chunk * chunkSize;
+          const end = Math.min((chunk + 1) * chunkSize, file.size);
+          bytesSent += end - start;
+          if (start > file.size) return;
+          reader.readAsArrayBuffer(file.slice(start, end));
         }
+        readChunk(currentChunk);
       } else if (event.data === 'end') {
         // On end signal, close data channel and peer connection
         dc.close();
-        pc.close()
+        pc.close();
         await setDoc(transferDoc, { completed: true }, { merge: true });
       }
     });
