@@ -39,8 +39,7 @@ export async function send(file: File) {
 
   // Create a Firestore document to store file data and signaling data
   const transferDoc = await addDoc(transfersCollection, { 
-    filename: file.name,
-    size: file.size,
+    completed: false,
   });
   const transferId = transferDoc.id;
   const connectionsCollection = collection(transfersCollection, transferId, "connections");

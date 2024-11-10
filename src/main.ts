@@ -6,37 +6,11 @@ import { connect } from './lib/receive'
 
 let file: File; 
 
-// Handle file input using the input element
-function inputHandler(e: Event) {-
-  e.preventDefault();
-  if (fileInput.files) {
-    file = fileInput.files[0];
-    selectedFile.textContent = `📦 ${file.name} (${formatBytes(file.size)})`;
-    sendButton.disabled = false;
-  }
-}
-
-// Handle file input using drag and drop
-function dropHandler(e: DragEvent) {
-  e.preventDefault();
-  fileDrop.classList.remove("dragging");
-  if (e.dataTransfer?.items) {
-    fileInput.files = e.dataTransfer.files
-  }
-  inputHandler(e);
-}
-
-// Prevent the browser from opening the file when it is dropped
-function dragOverHandler(e: DragEvent) {
-  e.preventDefault();
-}
-
 // Check if the user is sending or receiving
 const params = getParams();
 
 const fileSelect = document.getElementById("fileSelect") as HTMLButtonElement;
 const fileInput = document.getElementById("fileInput") as HTMLInputElement;
-const fileDrop = document.getElementById("fileDrop") as HTMLDivElement;
 const sendButton = document.getElementById("sendButton") as HTMLButtonElement;
 const downloadButton = document.getElementById("downloadButton") as HTMLButtonElement;
 const fileInfo = document.getElementById("fileInfo") as HTMLSpanElement;
@@ -95,11 +69,43 @@ if (params.receive) {
 } else {
   (document.getElementById("receive") as HTMLDivElement).remove();
 
+  // Handle file input using the input element
+  const inputHandler = (e: Event) => {-
+    e.preventDefault();
+    if (fileInput.files) {
+      file = fileInput.files[0];
+      selectedFile.textContent = `📦 ${file.name} (${formatBytes(file.size)})`;
+      sendButton.disabled = false;
+    }
+  }
+
+  // Handle file input using drag and drop
+  const dropHandler = (e: DragEvent) => {
+    e.preventDefault();
+    fileDrop.classList.remove("dragging");
+    if (e.dataTransfer?.items) {
+      fileInput.files = e.dataTransfer.files
+    }
+    inputHandler(e);
+  }
+
+  // Prevent the browser from opening the file when it is dropped
+  const dragOverHandler= (e: DragEvent) => {
+    e.preventDefault();
+  }
+
+  const fileDrop = document.createElement("div");
+  fileDrop.id = "fileDrop";
+  (document.getElementById("app") as HTMLDivElement).appendChild(fileDrop);
+
   fileSelect.onclick = () => fileInput.click();
   fileInput.onchange = inputHandler
   fileDrop.ondrop = dropHandler;
   fileDrop.ondragover = dragOverHandler;
   fileDrop.ondragenter = () => fileDrop.classList.add("dragging");
   fileDrop.ondragleave = () => fileDrop.classList.remove("dragging");
-  sendButton.onclick = async () => await send(file);
+  sendButton.onclick = async () => {
+    fileDrop.remove();
+    await send(file)
+  };
 }
