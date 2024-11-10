@@ -23,6 +23,15 @@ if (params.receive) {
   try {
     const { pc, dc } = await connect(params.receive);
 
+    setTimeout(() => {
+      if (pc.connectionState !== "connected") {
+        fileInfo.textContent = "connection timed out";
+        dc.close();
+        pc.close();
+        return;
+      }
+    }, 5000);
+
     pc.onconnectionstatechange = () => {
       const connectionState = document.getElementById("connectionState") as HTMLSpanElement;
       connectionState.textContent = pc.connectionState;
