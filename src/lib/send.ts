@@ -23,7 +23,11 @@ export async function send(file: File) {
   const selectedFile = document.getElementById("selectedFile")?.cloneNode(true) as HTMLSpanElement;
   sendContainer.innerHTML = "";
 	sendButton.disabled = true;
-  
+  const waitingEl = document.createElement("span");
+  waitingEl.textContent = "waiting";
+  waitingEl.style.fontWeight = "bold";
+  sendContainer.appendChild(waitingEl);
+
 	// Initialize Firestore (for signalling)
 	const app = initializeApp(firebaseConfig);
 	const db = getFirestore(app);
@@ -47,6 +51,7 @@ export async function send(file: File) {
   // Show download link
   const qrLink = `${import.meta.env.VITE_BASE_URL}?receive=${transferId}`
   const qrEl = createQRElement(qrLink);
+  waitingEl.remove();
   sendContainer.appendChild(qrEl);
 	console.log(qrLink)
 

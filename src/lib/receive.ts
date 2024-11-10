@@ -4,6 +4,8 @@ import { addDoc, collection, doc, getDoc, getFirestore, onSnapshot, setDoc } fro
 import { firebaseConfig, iceServers } from './config';
 
 export async function connect(id: string): Promise<{ pc: RTCPeerConnection, dc: RTCDataChannel }> {
+  (document.getElementById("fileInfo") as HTMLDivElement).innerHTML = "waiting";
+
 	// Initialize Firestore (for signalling)
 	const app = initializeApp(firebaseConfig);
 	const db = getFirestore(app);
