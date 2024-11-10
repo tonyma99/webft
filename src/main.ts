@@ -23,8 +23,13 @@ if (params.receive) {
   try {
     const { pc, dc } = await connect(params.receive);
 
+    let filename: string;
+    let size: number;
+    let bytesReceived = 0;
+    let incomingData: ArrayBuffer[] = [];
+
     setTimeout(() => {
-      if (pc.connectionState !== "connected") {
+      if (bytesReceived === 0 && pc.connectionState !== "connected") {
         fileInfo.textContent = "connection timed out";
         dc.close();
         pc.close();
@@ -39,10 +44,6 @@ if (params.receive) {
     }
 
     dc.onopen = async () => {
-      let filename: string;
-      let size: number;
-      let bytesReceived = 0;
-      let incomingData: ArrayBuffer[] = [];
       dc.onmessage = async (event) => {
         const data = event.data;
         if (!(data instanceof ArrayBuffer) && !filename && !size) {
